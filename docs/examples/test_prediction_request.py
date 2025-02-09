@@ -1,8 +1,8 @@
 import os
 import requests
-import json
+import pprint
 
-def main(port: int, container_name: str):
+def main(port: int, container_name: str, model_name: str):
     try:
         # Define the API endpoint
         URL = f"http://localhost:{port}/predict"
@@ -23,15 +23,20 @@ def main(port: int, container_name: str):
 
         # Create JSON payload
         payload = {
+            "model_name": model_name,
             "images": image_paths
         }
 
         # Send POST request
+        print("Sending POST request to:", URL)
         response = requests.post(URL, json=payload)
 
+
         # Print response
+        print("\nAPI response:")
         print("Status Code:", response.status_code)
-        print("Response JSON:", response.json())
+        print("Response JSON:")
+        pprint.pprint(response.json())
     
     except Exception as e:
         print("Error:", e)
@@ -58,9 +63,21 @@ def cli():
         help="Name of the FastAPI container",
     )
 
+    parser.add_argument(
+        "-m",
+        "--model_name",
+        type=str,
+        required=True,
+        help="Name of the model to use for prediction",
+    )
+
     args = parser.parse_args()
 
-    main(args.port, args.container_name)
+    main(
+        port=args.port,
+        container_name=args.container_name,
+        model_name=args.model_name
+    )
 
 
 if __name__ == "__main__":
