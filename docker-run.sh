@@ -22,6 +22,7 @@ printf "=> Container name: ${CONTAINER_NAME}\n"
 
 docker run --rm \
     --name "${CONTAINER_NAME}" \
+    --network="host" \
     -p 5000:5000 \
     -e KP_HOST="${KP_HOST}" \
     -e KP_PORT="${KP_PORT}" \
