@@ -5,7 +5,7 @@ import pprint
 def main(port: int, container_name: str, model_name: str):
     try:
         # Define the API endpoint
-        URL = f"http://localhost:{port}/predict"
+        URL = f"http://localhost:{port}/local-predict"
 
         # Docker cp the ./test_img folder to the /app/ folder
         # This is the folder where the FastAPI container expects the images
