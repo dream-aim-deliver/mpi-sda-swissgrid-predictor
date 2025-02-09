@@ -39,7 +39,7 @@ To do so, you need to install the development dependencies in a virtual environm
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install .[dev]
+pip install -r dev-requirements.txt
 ```
 
 Then you can run the scripts in the `docs/examples` folder.
