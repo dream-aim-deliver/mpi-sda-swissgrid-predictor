@@ -1,12 +1,8 @@
-FROM continuumio/anaconda3
+FROM labg/mpi-sda-swissgrid-predictor-conda-environment
 
 WORKDIR /app
 
-COPY . /app
-
-COPY  test /app/test
-
-RUN conda env create -f enviroment.yml
+COPY app.py /app/
 
 EXPOSE 5000
 

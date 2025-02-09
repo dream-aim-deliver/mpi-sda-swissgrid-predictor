@@ -1,0 +1,17 @@
+[project]
+name = "mpi_sda_swissgrid_predictor"
+version = "0.1.0"
+description = "Swissgrid predictor for MPI-SDA"
+dependencies = [
+    "requests"
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "black"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

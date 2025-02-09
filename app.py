@@ -1,12 +1,27 @@
+import os
 from flask import Flask, request, jsonify
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import numpy as np
 
+
+MODEL_BASEPATH = os.getenv("MODEL_BASEPATH")
+MODEL_FILENAME = os.getenv("MODEL_FILENAME")
+KP_HOST = os.getenv("KP_HOST")
+KP_PORT = os.getenv("KP_PORT")
+KP_SCHEME = os.getenv("KP_SCHEME")
+KP_AUTH_TOKEN = os.getenv("KP_AUTH_TOKEN")
+
+
+if any(v is None for v in [MODEL_BASEPATH, MODEL_FILENAME, KP_HOST, KP_PORT, KP_SCHEME, KP_AUTH_TOKEN]):
+    raise ValueError("Please set all environment variables: MODEL_BASEPATH, MODEL_FILENAME, KP_HOST, KP_PORT, KP_SCHEME, KP_AUTH_TOKEN")
+
+
 app = Flask(__name__)
 with tf.device("/CPU:0"):
-    model = load_model('/app/Unified_model.keras')
+    model = load_model(os.path.join(MODEL_BASEPATH, MODEL_FILENAME))
+
 
 @app.route('/')
 def home():
@@ -20,15 +35,16 @@ def predict():
         print("Received request:", request.json)
 
         data = request.json  # Expect JSON payload 
-        images=data['images']
+
+        images = data['images']
         if not data or 'images' not in data:
             return jsonify({'error': 'Invalid input. JSON with key "images" is required.'}), 400
 
-        if len(images)!=5:
+        if len(images) != 5:
             return jsonify({"error": f"Exactly 5 images required, Received {len(images)}."}),400
 
         preprocessed_images = []
-        target_size=(256,256)
+        target_size = (256, 256)
        
         for image in data['images']:
             img = load_img(image, target_size=target_size)
@@ -38,7 +54,13 @@ def predict():
 
         # Make predictions
         predictions = model.predict(np.expand_dims(combined_images, axis=0))  # Add batch dimension
-        return jsonify({'predictions': predictions.tolist()})
+
+        if MODEL_FILENAME == 'Unified_Beznau_model.keras':
+            predictions = [pred.tolist() for pred in predictions]
+            return jsonify({'predictions': predictions})
+
+        elif MODEL_FILENAME == 'Unified_model.keras':
+            return jsonify({'predictions': predictions.tolist()})
 
     except Exception as e:
         print("Error during prediction:", str(e))
