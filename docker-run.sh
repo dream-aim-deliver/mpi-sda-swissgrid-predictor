@@ -2,13 +2,13 @@
 
 
 # Load the environment variables from .env
+echo "=> Loading environment variables from .env file..."
 set -a
 source .env
 set +a
 
-
 # Check that all environment variables are set
-if [ -z "$MODEL_BASEPATH"] || [ -z "$MODEL_FILENAME" ] || [ -z "$KP_HOST" ] || [ -z "$KP_PORT" ] || [ -z "$KP_SCHEME" ] || [ -z "$KP_AUTH_TOKEN" ]; then
+if [ -z "$MODEL_BASEPATH" ] || [ -z "$MODEL_FILENAME" ] || [ -z "$KP_HOST" ] || [ -z "$KP_PORT" ] || [ -z "$KP_SCHEME" ] || [ -z "$KP_AUTH_TOKEN" ]; then
     echo "MODEL_BASEPATH, MODEL_FILENAME, KP_HOST, KP_PORT, KP_SCHEME and KP_AUTH_TOKEN must be set in the .env file. Aborting."
     exit 1
 fi
@@ -28,10 +28,16 @@ else
     exit 1
 fi
 
+echo "=> Successfully loaded environment variables from .env file."
+
 
 # Run the docker container
+echo "=> Running the docker container..."
+CONTAINER_NAME="mpi-sda-swissgrid-predictor-${MODEL}"
+printf "=> Container name: ${CONTAINER_NAME}\n=> Model: ${MODEL}\n"
+
 docker run --rm \
-    --name "mpi-sda-swissgrid-predictor-${MODEL}" \
+    --name "${CONTAINER_NAME}" \
     -p 5000:5000 \
     -e MODEL_BASEPATH="${MODEL_BASEPATH}" \
     -e MODEL_FILENAME="${MODEL_FILENAME}" \
