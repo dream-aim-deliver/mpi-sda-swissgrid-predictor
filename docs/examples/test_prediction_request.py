@@ -12,7 +12,6 @@ def main(port: int, container_name: str, model_name: str):
         os.system(f"docker cp ./test_img {container_name}:/app/")
 
         # Hardcoded image paths
-        # Make sure you copy these images, from the `img` folder in this repo, to the `/app/test` folder in the FastAPI container
         image_paths = [
             "/app/test_img/2023-01-01_chlorophyll.PNG",
             "/app/test_img/2023-01-01_moisture.PNG",
