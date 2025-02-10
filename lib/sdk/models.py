@@ -1,7 +1,5 @@
 from enum import Enum
-from typing import List, TypeVar
-from pydantic import BaseModel, Field
-from datetime import datetime
+from pydantic import BaseModel
 
 
 class BaseJobState(Enum):
@@ -20,6 +18,19 @@ class ProtocolEnum(Enum):
     """
     S3 = "s3"
     LOCAL = "local"
+
+class KernelPlancksterRelativePath(BaseModel):
+    case_study_name: str
+    tracer_id: str
+    job_id: str
+    timestamp: str
+    dataset: str
+    evalscript_name: str
+    image_hash: str
+    file_extension: str
+
+    def to_str(self) -> str:
+        return f"{self.case_study_name}/{self.tracer_id}/{self.job_id}/{self.timestamp}/sentinel/{self.dataset}_{self.evalscript_name}_{self.image_hash}.{self.file_extension}"
 
 
 class KernelPlancksterSourceData(BaseModel):
@@ -49,43 +60,3 @@ class KernelPlancksterSourceData(BaseModel):
         Loads the model from a json formatted string. Wrapper around pydantic's model_validate_json method: in case they decide to deprecate it, we only refactor here.
         """
         return cls.model_validate_json(json_data=json_str)
-
-
-class BaseJob(BaseModel):
-    """
-    NOTE: deprecated.
-    """
-    id: int
-    tracer_id: str = Field(
-        description="A unique identifier to trace jobs across the SDA runtime."
-    )
-    created_at: datetime = datetime.now()
-    heartbeat: datetime = datetime.now()
-    name: str
-    args: dict = {}
-    state: Enum = BaseJobState.CREATED
-    messages: List[str] = []
-    output_source_data_list: List[KernelPlancksterSourceData] = []
-    input_source_data_list: List[KernelPlancksterSourceData] = []
-
-    def touch(self) -> None:
-        self.heartbeat = datetime.now()
-
-
-TBaseJob = TypeVar("TBaseJob", bound=BaseJob)
-
-
-class JobOutput(BaseModel):
-    """
-    This class is used to represent the output of a scraper job.
-
-    Attributes:
-    - job_state: BaseJobState
-    - trace_id: str
-    - source_data_list: List[KernelPlancksterSourceData] | None
-    """
-
-    job_state: BaseJobState
-    tracer_id: str
-    source_data_list: List[KernelPlancksterSourceData] | None
-
