@@ -1,4 +1,10 @@
+flask
+numpy
+tensorflow
 requests
+httpx
+pydantic
 mypy
 types-requests
+types-flask
 black

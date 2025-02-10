@@ -73,3 +73,21 @@ class FileRepository:
         if upload_res.status_code != 200:
             raise ValueError(f"Failed to upload file to signed url: {upload_res.text}")
 
+
+    def public_download(self, signed_url: str, file_path: str) -> str:
+        """
+        Download a file from a signed url.
+
+        :param signed_url: The signed url to download from.
+        :param file_path: The path to save the downloaded file.
+        """
+
+        download_res = requests.get(signed_url, verify=False)
+
+        if download_res.status_code != 200:
+            raise ValueError(f"Failed to download file from signed url: {download_res.text}")
+
+        with open(file_path, "wb") as f:
+            f.write(download_res.content)
+
+        return file_path

@@ -2,28 +2,24 @@ import os
 import requests
 import pprint
 
-def main(port: int, container_name: str, model_name: str):
+def main(port: int, model_name: str):
     try:
         # Define the API endpoint
-        URL = f"http://localhost:{port}/local-predict"
+        URL = f"http://localhost:{port}/predict"
 
-        # Docker cp the ./test_img folder to the /app/ folder
-        # This is the folder where the FastAPI container expects the images
-        os.system(f"docker cp ./test_img {container_name}:/app/")
-
-        # Hardcoded image paths
-        image_paths = [
-            "/app/test_img/2023-01-01_chlorophyll.png",
-            "/app/test_img/2023-01-01_moisture.png",
-            "/app/test_img/2023-01-01_natural.png",
-            "/app/test_img/2023-01-01_optical-thickness.png",
-            "/app/test_img/2023-01-01_thermal.png"
+        # Hardcoded relative paths
+        relative_paths = [
+            "testCase/testTracer/1/2023-01-01/sentinel/testDataset_thermal_testHash.png",
+            "testCase/testTracer/1/2023-01-01/sentinel/testDataset_natural_testHash.png",
+            "testCase/testTracer/1/2023-01-01/sentinel/testDataset_optical-thickness_testHash.png",
+            "testCase/testTracer/1/2023-01-01/sentinel/testDataset_moisture_testHash.png",
+            "testCase/testTracer/1/2023-01-01/sentinel/testDataset_chlorophyll_testHash.png",
         ]
 
         # Create JSON payload
         payload = {
             "model_name": model_name,
-            "images": image_paths
+            "relative_paths": relative_paths,
         }
 
         # Send POST request
@@ -55,14 +51,6 @@ def cli():
     )
 
     parser.add_argument(
-        "-c",
-        "--container_name",
-        type=str,
-        required=True,
-        help="Name of the FastAPI container",
-    )
-
-    parser.add_argument(
         "-m",
         "--model_name",
         type=str,
@@ -74,7 +62,6 @@ def cli():
 
     main(
         port=args.port,
-        container_name=args.container_name,
         model_name=args.model_name
     )
 

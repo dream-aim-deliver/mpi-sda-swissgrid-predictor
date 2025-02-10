@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import traceback
 from flask import Flask, jsonify
 from lib.predict_endpoint import predict_function
 from lib.setup import setup
@@ -24,7 +25,6 @@ try:
     if any(v is None for v in [KP_HOST, KP_PORT, KP_SCHEME, KP_AUTH_TOKEN]):
         raise ValueError("Please set all environment variables: KP_HOST, KP_PORT, KP_SCHEME, KP_AUTH_TOKEN")
 
-
     kernel_planckster_gateway, protocol_enum, file_repository = setup(
         logger=logger,
         kp_auth_token=KP_AUTH_TOKEN,
@@ -32,6 +32,7 @@ try:
         kp_port=KP_PORT,
         kp_scheme=KP_SCHEME,
     )
+
 except Exception as e:
     logger.error(f"Error during setup: {str(e)}")
     sys.exit(1)
@@ -61,11 +62,15 @@ def local_predict():
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        return predict_function(SUPPORTED_MODELS, unified_model, beznau_model)
+        return predict_function(SUPPORTED_MODELS, unified_model, beznau_model, kernel_planckster_gateway, file_repository)
 
     except Exception as e:
         print("Error during prediction: ", str(e))
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': str(e),
+            'error_type': e.__class__.__name__,
+            'traceback': f"{traceback.format_exc()}",
+        }), 500
 
 
 if __name__ == '__main__':
