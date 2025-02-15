@@ -1,4 +1,4 @@
-
+# MPI-SDA Swissgrid Predictor
 
 ### Building the Docker Container
 
@@ -50,11 +50,15 @@ For a simple check that the container is running and the API is reachable:
 python docs/examples/test_ping_request.py
 ```
 
-For a more substantial test of the prediction, start the container, note the container name, and run:
+For a more substantial test of the prediction:
+- Build the container using the `Dockerfile`, with the correct `.env` file matching your Kernel Planckster instance
+- Run the container using the `docker-run.sh` script
+- Then:
 
 ```sh
 cd docs/examples
-python test_prediction_request.py -c "container-name" -n "model-name"
+python upload_images_to_kp.py  # Will upload test images to Kernel Planckster
+python test_prediction_request.py -n "model-name"
 ```
 
 Where `model-name` is one of the supported models. E.g., "Beznau", "Unified".
