@@ -50,91 +50,110 @@ def predict_function(
     base_dir = 'images'
     os.makedirs(base_dir, exist_ok=True)
 
-    for i, relative_path in enumerate(relative_paths):
-        try:
-            parsed_rp = parse_relative_path(relative_path)
-        except Exception as e:
+    try:
+
+        for i, relative_path in enumerate(relative_paths):
+            try:
+                parsed_rp = parse_relative_path(relative_path)
+            except Exception as e:
+                return jsonify({
+                    "error": f"Failed to parse relative path for image {i+1}, '{relative_path}'.",
+                    "details": str(e),
+                    "error_type": e.__class__.__name__,
+                    "traceback": traceback.format_exc(),
+                }), 400
+
+            if IMAGE_SEQUENCE[i] not in parsed_rp.evalscript_name:
+                return jsonify({"error": f"Invalid image sequence for image {i+1}. Expected '{IMAGE_SEQUENCE[i]}' in evalscript name, got '{parsed_rp.evalscript_name}'."}), 400
+
+            source_datum = KernelPlancksterSourceData(
+                name=f"{parsed_rp.image_hash}_{parsed_rp.evalscript_name}",
+                protocol = ProtocolEnum.S3,
+                relative_path = parsed_rp.to_str()
+            )
+
+            signed_url = kernel_planckster_gateway.generate_signed_url_for_download(source_datum)
+
+            file_name = f"{parsed_rp.timestamp}_{parsed_rp.evalscript_name}.{parsed_rp.file_extension}"
+            local_file_name = file_repository.public_download(
+                signed_url=signed_url,
+                file_path=os.path.join(base_dir, file_name)
+            )
+
+            full_path = os.path.abspath(local_file_name)
+            images.append(full_path)
+
+        # Preprocess images
+        preprocessed_images = []
+        target_size = (256, 256)
+        
+        for image in images:
+            img = load_img(image, target_size=target_size)
+            img_array = img_to_array(img) / 255.0  # Normalize to [0, 1]
+            preprocessed_images.append(img_array)
+        combined_images = np.concatenate(preprocessed_images, axis=-1)
+
+
+        # Make predictions
+        if model_name == 'unified':
+            predictions = unified_model.predict(np.expand_dims(combined_images, axis=0))  # Add batch dimension
+
+            probability = predictions.tolist()[0][0]
+
+            prediction = probability_to_prediction(probability) 
+            confidence = probability_to_confidence(probability)
+
             return jsonify({
-                "error": f"Failed to parse relative path for image {i+1}, '{relative_path}'.",
-                "details": str(e),
-                "error_type": e.__class__.__name__,
-                "traceback": traceback.format_exc(),
-            }), 400
+                'data': [
+                    {
+                        'label': model_name,
+                        'prediction': prediction,
+                        'confidence': confidence
+                    }
+                ]
+            })
+                
 
-        if IMAGE_SEQUENCE[i] not in parsed_rp.evalscript_name:
-            return jsonify({"error": f"Invalid image sequence for image {i+1}. Expected '{IMAGE_SEQUENCE[i]}' in evalscript name, got '{parsed_rp.evalscript_name}'."}), 400
+        elif model_name == 'beznau':
 
-        source_datum = KernelPlancksterSourceData(
-            name=f"{parsed_rp.image_hash}_{parsed_rp.evalscript_name}",
-            protocol = ProtocolEnum.S3,
-            relative_path = parsed_rp.to_str()
-        )
+            predictions = beznau_model.predict(np.expand_dims(combined_images, axis=0)) # Add batch dimension
+            nested_prob_1, nested_prob_2 = (pred.tolist() for pred in predictions)
 
-        signed_url = kernel_planckster_gateway.generate_signed_url_for_download(source_datum)
+            probability_1 = nested_prob_1[0][0]
+            prediction_1 = probability_to_prediction(probability_1) 
+            confidence_1 = probability_to_confidence(probability_1) 
 
-        file_name = f"{parsed_rp.timestamp}_{parsed_rp.evalscript_name}.{parsed_rp.file_extension}"
-        local_file_name = file_repository.public_download(
-            signed_url=signed_url,
-            file_path=os.path.join(base_dir, file_name)
-        )
+            probability_2 = nested_prob_2[0][0]
+            prediction_2 = probability_to_prediction(probability_2)
+            confidence_2 = probability_to_confidence(probability_2) 
 
-        full_path = os.path.abspath(local_file_name)
-        images.append(full_path)
-
-    # Preprocess images
-    preprocessed_images = []
-    target_size = (256, 256)
-    
-    for image in images:
-        img = load_img(image, target_size=target_size)
-        img_array = img_to_array(img) / 255.0  # Normalize to [0, 1]
-        preprocessed_images.append(img_array)
-    combined_images = np.concatenate(preprocessed_images, axis=-1)
+            return jsonify({
+                'data': [
+                    {
+                        'label': f"{model_name}_tower_1",
+                        'prediction': prediction_1,
+                        'confidence': confidence_1
+                    },
+                    {
+                        'label': f"{model_name}_tower_2",
+                        'prediction': prediction_2,
+                        'confidence': confidence_2
+                    }
+                ]
+            })
 
 
-    # Make predictions
-    if model_name == 'unified':
-        predictions = unified_model.predict(np.expand_dims(combined_images, axis=0))  # Add batch dimension
-
-        probability = predictions.tolist()[0][0]
-
-        prediction = probability_to_prediction(probability) 
-        confidence = probability_to_confidence(probability)
-
+    except Exception as e:
         return jsonify({
-            'data': [
-                {
-                    'label': model_name,
-                    'prediction': prediction,
-                    'confidence': confidence
-                }
-            ]
-        })
-            
+            "error": f"Failed to make prediction for model '{model_name}'.",
+            "details": str(e),
+            "error_type": e.__class__.__name__,
+            "traceback": traceback.format_exc(),
+        }), 500
 
-    elif model_name == 'beznau':
-        predictions = beznau_model.predict(np.expand_dims(combined_images, axis=0)) # Add batch dimension
-        nested_prob_1, nested_prob_2 = (pred.tolist() for pred in predictions)
 
-        probability_1 = nested_prob_1[0][0]
-        prediction_1 = probability_to_prediction(probability_1) 
-        confidence_1 = probability_to_confidence(probability_1) 
-
-        probability_2 = nested_prob_2[0][0]
-        prediction_2 = probability_to_prediction(probability_2)
-        confidence_2 = probability_to_confidence(probability_2) 
-
-        return jsonify({
-            'data': [
-                {
-                    'label': f"{model_name}_tower_1",
-                    'prediction': prediction_1,
-                    'confidence': confidence_1
-                },
-                {
-                    'label': f"{model_name}_tower_2",
-                    'prediction': prediction_2,
-                    'confidence': confidence_2
-                }
-            ]
-        })
+    finally:
+        # Cleanup images
+        for image in images:
+            if os.path.exists(image):
+                os.remove(image)
